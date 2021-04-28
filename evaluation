@@ -1,0 +1,73 @@
+  #create evaluation metrics for tesing and training data automatically
+    def Evaluate(data,orginaldata,Top4Models,featureImp,SplitOrNot):
+    X = data[featureImp]   
+    y = orginaldata['ischurned'] 
+    X_train, X_validation, Y_train, Y_validation = train_test_split(X, y, test_size=0.20, random_state=1)
+    if SplitOrNot==1: #split
+        print('Accuracy score \n' + str(accuracy_score(Y_validation, Predect_class(data, orginaldata,Top4Models,featureImp,1) )))
+        print('\nconfusion_matrix n'+str(confusion_matrix(Y_validation, Predect_class(data, orginaldata,Top4Models,featureImp,1)   )))
+        print(classification_report(Y_validation,  Predect_class(data, orginaldata,Top4Models,featureImp,1) ))
+    else:
+        print('Accuracy score \n' + str(accuracy_score(y, Predect_class(data, orginaldata,Top4Models,featureImp,0) )))
+        print('\nconfusion_matrix n'+str(confusion_matrix(y, Predect_class(data, orginaldata,Top4Models,featureImp,0) )))
+        print(classification_report(y, Predect_class(data, orginaldata,Top4Models,featureImp,0)))
+        
+        
+      #creating ROC curve
+      def Create_ROC_Cureve(MODEL,data,target,featureImp):
+    X = data[featureImp]  
+    y =target 
+    #trainX, testX, trainy, testy= train_test_split(X, y, test_size=0.20, random_state=2)
+
+    ns_probs = [0 for _ in range(len(y))]
+    lr_probs = MODEL.predict_proba(X)
+    # keep probabilities for the positive outcome only
+    lr_probs = lr_probs[:, 1]
+    # calculate scores
+    ns_auc = roc_auc_score(y, ns_probs)
+    lr_auc = roc_auc_score(y, lr_probs)
+    # summarize scores
+    print('No Skill: ROC AUC=%.3f' % (ns_auc))
+    print('Logistic: ROC AUC=%.3f' % (lr_auc))
+    # calculate roc curves
+    ns_fpr, ns_tpr, _ = roc_curve(y, ns_probs)
+    lr_fpr, lr_tpr, _ = roc_curve(y, lr_probs)
+    # plot the roc curve for the model
+    plt.plot(ns_fpr, ns_tpr, linestyle='--', label='No Skill')
+    plt.plot(lr_fpr, lr_tpr, marker='.', label='Logistic')
+    # axis labels
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    # show the legend
+    plt.legend()
+    # show the plot
+    plt.show()
+    
+    #create precesion recall curve
+    def Precesion_Recall_Curve(MODEL,data,target,featureImp):
+    X = data[featureImp]  
+    y = target
+    #trainX, testX, trainy, testy= train_test_split(X, y, test_size=0.20, random_state=2)
+
+    ns_probs = [0 for _ in range(len(y))]
+   # lr_probs = MODEL.predict_proba(testX)
+    lr_probs = MODEL.predict_proba(X)
+    # keep probabilities for the positive outcome only
+    lr_probs = lr_probs[:, 1]
+    # predict class values
+    yhat = MODEL.predict(X)
+    lr_precision, lr_recall, _ = precision_recall_curve(y, lr_probs)
+    lr_f1, lr_auc = f1_score(y, yhat), auc(lr_recall, lr_precision)
+    # summarize scores
+    print('Logistic: f1=%.3f auc=%.3f' % (lr_f1, lr_auc))
+    # plot the precision-recall curves
+    no_skill = len(y[y==1]) / len(y)
+    plt.plot([0, 1], [no_skill, no_skill], linestyle='--', label='No Skill')
+    plt.plot(lr_recall, lr_precision, marker='.', label='Logistic')
+    # axis labels
+    plt.xlabel('Recall')
+    plt.ylabel('Precision')
+    # show the legend
+    plt.legend()
+    # show the plot
+    plt.show()
