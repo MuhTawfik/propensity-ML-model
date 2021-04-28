@@ -1,0 +1,22 @@
+#this code loop over each colmn on the dataset and each value to make sure of effective handel the outliers
+# with help of universate method this is a way that you can automatically handel anyoutliers on your data using the following
+#is the value below percentile 5% make it 5%, if value above  percentile 95% make it with max 95%*3 as max value
+def Remove_Outlier_and_plot(Data,figrname):    
+    plt.rcParams.update({'figure.max_open_warning': 0})
+    plt.clf()#clean the plot after saving
+    
+    for columnName in Data:
+        if (data[columnName].dtype!='object' or data[columnName].dtype!='bool'):
+            p5=float(Data[columnName].quantile([.05]))
+            p95=float((Data[columnName].quantile([.95])))
+            p95_3=float((Data[columnName].quantile([.95])))*3 
+            Data[columnName]=Data[columnName].where(Data[columnName] <= p95_3 , p95_3)          
+            Data[columnName]=Data[columnName].where(Data[columnName] >= p5, p5) #if its lower p5 make it p5
+            sns.set()
+            fig, ax = plt.subplots()
+            sns.set(style="ticks")
+            sns.boxplot(y= Data[columnName])  # column is chosen here
+            sns.despine(offset=10, trim=True) 
+            fig.set_size_inches(10,5)
+            plt.savefig(r'cleaningOutLier/OutLier_'+str(figrname)+str(columnName)+ '.png', ext='png')
+    return Data
