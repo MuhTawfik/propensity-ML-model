@@ -1,0 +1,170 @@
+#feature selection using feature importance method
+def featureImportance(data,orginaldata,name): 
+    X = data[:]  #independent columns
+    y = orginaldata['ischurned']  
+    sns.set(font_scale=1)  # crazy big
+    model = ExtraTreesClassifier()
+    model.fit(X,y)
+    #print(model.feature_importances_) #use inbuilt class feature_importances of tree based classifiers
+    #plot graph of feature importances for better visualization
+    feat_importances = pd.Series(model.feature_importances_, index=X.columns)
+    return feat_importances.nlargest(10)
+    
+    #plot feature importance
+    def plotFeatureImportance(feat_importances,name):
+    feat_importances.nlargest(10).plot(kind='barh')
+    plt.suptitle(name, fontsize=30) 
+    plt.savefig(r'path/'+str(name)  +'.png', ext='png')
+    plt.show()
+    plt.clf()
+    
+    #create model comparision function to plot diffrent classifier using accuracy and standard deviation 
+    def check_score_of_diffrent_model(data,orginaldata,featureImp):
+    X = data[featureImp]   
+    y = orginaldata['ischurned'] 
+    X_train, X_validation, Y_train, Y_validation = train_test_split(X, y, test_size=0.20, random_state=1)
+    warnings.filterwarnings('ignore')
+    #check scores for several models
+    models = []
+    models.append(('LR', LogisticRegression(solver='liblinear', multi_class='ovr',)))
+    models.append(('LDA', LinearDiscriminantAnalysis()))
+    models.append(('KNN', KNeighborsClassifier(n_neighbors=5,weights='distance',algorithm='auto')))
+    models.append(('DecisionTreeClassifier', DecisionTreeClassifier()))
+    models.append(('NB', GaussianNB()))
+    models.append(('SVM', SVC(gamma='auto',probability=True))) # (Support Vector Classifier) 
+    models.append(('Random Forest',RandomForestClassifier()))
+    models.append(('deep_nn',MLPClassifier()))
+    #models.append(('ridge',RidgeClassifier()))
+    #models.append(('xgb',XGBClassifier(ojective='reg:logistic')))
+    models.append(('lasso',LogisticRegression(solver='liblinear',penalty='l1')))
+    models.append(('elasticnet',SGDClassifier(loss='log', penalty='elasticnet')))
+    # evaluate each model in turn
+    results=[]
+    names=[]
+    resultmean=[]
+    resultstd=[]
+    for name, model in models:
+        kfold = StratifiedKFold(n_splits=10, random_state=1, shuffle=True)
+        cv_results = cross_val_score(model, X_train, Y_train, cv=kfold, scoring='accuracy')
+        results.append(cv_results)
+        names.append(name)
+        resultmean.append(cv_results.mean())
+        resultstd.append( cv_results.std())
+        
+        #print('%s: %f (%f)' % (name, cv_results.mean(), cv_results.std()))
+        data_result=pd.DataFrame(list(zip(names, resultmean,resultstd)), 
+               columns =['Name', 'mean','std']) 
+            #compare models
+    sns.set(font_scale=1) 
+    # Compare Algorithms
+    plt.boxplot(results, labels=names)
+    plt.title('Algorithm Comparison')
+    plt.xticks(rotation=90)
+    plt.show()
+    return data_result.nlargest(4,'mean')
+    
+    
+    # create ensemble classifier using top 3 accuracy model
+    # Voting Ensemble for Classification
+def ensemble_Best4Models(df_BestModels):
+    seed = 7
+    kfold = model_selection.KFold(n_splits=10, random_state=seed)
+    # create the sub models
+    estimators = []
+    for row in df_BestModels.index:
+        if df_BestModels['Name'][row]=='LR':
+            estimators.append(('LR', LogisticRegression(solver='liblinear', multi_class='ovr')))
+
+        if df_BestModels['Name'][row]=='LDA':
+            estimators.append(('LDA', LinearDiscriminantAnalysis()))
+
+        if df_BestModels['Name'][row]=='KNN':
+            estimators.append(('KNN', KNeighborsClassifier(n_neighbors=5,weights='distance',algorithm='auto')))
+
+        if df_BestModels['Name'][row]=='DecisionTreeClassifier':
+            estimators.append(('DecisionTreeClassifier', DecisionTreeClassifier()))
+
+        if df_BestModels['Name'][row]=='NB':
+            estimators.append(('NB', GaussianNB()))
+
+        if df_BestModels['Name'][row]=='SVM':
+            estimators.append(('SVM', SVC(gamma='auto',probability=True)))# (Support Vector Classifier) 
+
+        if df_BestModels['Name'][row]=='Random Forest':
+            estimators.append(('Random Forest', RandomForestClassifier()))
+
+        if df_BestModels['Name'][row]=='deep_nn':
+            estimators.append(('deep_nn',MLPClassifier()))    
+
+#         if df_BestModels['Name'][row]=='ridge':
+#             estimators.append(('ridge', RidgeClassifier()))   
+
+#         if df_BestModels['Name'][row]=='xgb':
+#             estimators.append(('xgb', XGBClassifier(ojective='reg:logistic')))    
+
+        if df_BestModels['Name'][row]=='lasso':
+            estimators.append(('lasso',LogisticRegression(solver='liblinear',penalty='l1')))   
+
+        if df_BestModels['Name'][row]=='elasticnet':
+            estimators.append(('elasticnet', SGDClassifier(loss='log', penalty='elasticnet')))   
+
+
+    # create the ensemble model
+    ensemble = VotingClassifier(estimators, voting='soft')  
+    return ensemble
+    
+    #create scoring function
+    def fitting_and_scoreing(data,orginaldata,Top4Models,featureImp,SplitOrNot):
+    ensemble=ensemble_Best4Models(Top4Models)
+    score=''
+    if SplitOrNot==1: #split
+        X = data[featureImp]  #ifeature selection of RFE
+        y = orginaldata['ischurned'] 
+        X_train, X_validation, Y_train, Y_validation = train_test_split(X, y, test_size=0.20, random_state=1)
+        ensemble.fit(X_train,Y_train) #run enseble function
+        score=ensemble.score(X_validation, Y_validation)
+    else:
+        X = data[featureImp]  #ifeature selection of RFE
+        y = orginaldata['ischurned']     
+        ensemble.fit(X,y) #orginal ensemble.fit(X_train, Y_train)
+        score=ensemble.score(x, y)
+    return score
+    
+    
+    #create prediction function
+    def Predect_class(data,orginaldata,Top4Models,featureImp,SplitOrNot):
+    ensemble=ensemble_Best4Models(Top4Models)
+    predected_y=[]
+    if SplitOrNot==1: #split
+        X = data[featureImp]  #ifeature selection of RFE
+        y = orginaldata['ischurned'] 
+        X_train, X_validation, Y_train, Y_validation = train_test_split(X, y, test_size=0.20, random_state=1)
+        ensemble.fit(X_train,Y_train) #run enseble function
+        predected_y=predected_y=ensemble.predict(X_validation)
+    else:
+        X = data[featureImp]  #ifeature selection of RFE
+        y = orginaldata['ischurned'] 
+        ensemble.fit(X,y)
+        predected_y=ensemble.predict(X) #orginal ensemble.fit(X_train, Y_train)
+        #predected_y=ensemble.score(x, y)
+    return predected_y
+    
+    #create probability to churn column on the dataset
+    def Predect_proba(data,orginaldata,Top4Models,featureImp,SplitOrNot):
+    ensemble=ensemble_Best4Models(Top4Models)
+    predected_y=[]
+    if SplitOrNot==1: #split
+        X = data[featureImp]  #ifeature selection of RFE
+        y = orginaldata['ischurned'] 
+        X_train, X_validation, Y_train, Y_validation = train_test_split(X, y, test_size=0.20, random_state=1)
+        ensemble.fit(X_train,Y_train) #run enseble function
+        predected_y=ensemble.predict_proba(X_validation)
+    else:
+        X = data[featureImp]  #ifeature selection of RFE
+        y = orginaldata['ischurned'] 
+        ensemble.fit(X,y)
+        predected_y=ensemble.predict_proba(X ) #orginal ensemble.fit(X_train, Y_train)
+        #predected_y=ensemble.score(x, y)
+    return predected_y
+    
+  
