@@ -20,3 +20,4 @@ def Remove_Outlier_and_plot(Data,figrname):
             fig.set_size_inches(10,5)
             plt.savefig(r'cleaningOutLier/OutLier_'+str(figrname)+str(columnName)+ '.png', ext='png')
     return Data
+
