@@ -1,0 +1,16 @@
+def corrMatrix(data,orginaldata,dfname):
+    plt.clf()
+    gc.collect()#collect
+    X = data[:]  #independent columns
+    y = orginaldata['ischurned'] 
+    corrmat = X.corr()
+    top_corr_features = corrmat.index
+    plt.figure(figsize=(150,150))
+    #plot heat map
+    sns.set(font_scale=10)
+    g=sns.heatmap(data[top_corr_features].corr(),annot=True,fmt='.1g',vmin=-1, vmax=1, center= 0,
+                          cmap="coolwarm",linewidths=.3,
+                          linecolor="black",
+                          #cbar=False,
+                         square=True).set_title(dfname+'\n\n')
+    plt.savefig(r'CorrMatrix/correlation matrix'+str(dfname)+ '.png', ext='png')
